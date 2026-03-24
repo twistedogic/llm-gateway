@@ -1,0 +1,47 @@
+// keys.json — chmod 600, owned by gateway process
+// Supports hot-reload: changes are picked up automatically via fsnotify
+{
+  "keys": [
+    {
+      "id": "key-team-a",
+      "provider": "openai",
+      "key": "sk-proj-...",
+      "tier": "standard",
+      "limits": {
+        "rpm": 500,
+        "tpm": 300000,
+        "daily": 50000
+      },
+      "metadata": {
+        "team": "team-a",
+        "owner": "jordan@example.com"
+      }
+    },
+    {
+      "id": "key-enterprise",
+      "provider": "azure",
+      "key": "...",
+      "endpoint": "https://mycompany.openai.azure.com",
+      "api_version": "2024-06-01",
+      "tier": "enterprise",
+      "limits": {
+        "rpm": 10000,
+        "tpm": 10000000
+      },
+      "metadata": {
+        "team": "platform",
+        "owner": "infra@example.com"
+      }
+    },
+    {
+      "id": "key-user-01",
+      "provider": "openai",
+      "key": "sk-...",
+      "tier": "personal",
+      "limits": {
+        "rpm": 60,
+        "tpm": 30000
+      }
+    }
+  ]
+}

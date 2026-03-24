@@ -1,0 +1,122 @@
+version: "3.9"
+
+services:
+  # ── llm-gateway ────────────────────────────────────────────────
+  llm-gateway:
+    build: .
+    ports:
+      - "8080:8080"       # Gateway HTTP
+      - "9090:9090"       # Prometheus metrics
+    volumes:
+      - ./configs:/app/configs:ro
+    environment:
+      GATEWAY_APP_HOST: "0.0.0.0"
+      GATEWAY_APP_PORT: "8080"
+      GATEWAY_TELEMETRY_ENABLED: "true"
+      GATEWAY_TELEMETRY_OTLP_ENDPOINT: "otel-collector:4317"
+      GATEWAY_TELEMETRY_PROMETHEUS_ENABLED: "true"
+      GATEWAY_TEMPORAL_HOST: "temporal:7233"
+      GATEWAY_AUTH_KEYS_FILE: "/app/configs/keys.json"
+      GATEWAY_SKILLS_PATH: "/app/configs/skills.json"
+      GATEWAY_PROVIDERS_OPENAI_BASE_URL: "https://api.openai.com/v1"
+      GATEWAY_PROVIDERS_OPENROUTER_BASE_URL: "https://openrouter.ai/api/v1"
+    depends_on:
+      temporal:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── Temporal ─────────────────────────────────────────────────
+  temporal:
+    image: temporalio/auto-setup:1.26.0
+    ports:
+      - "7233:7233"
+    volumes:
+      - temporal-data:/tmp/data
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=postgres
+      - POSTGRES_SEEDS=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:7233/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ── Postgres (Temporal persistence) ───────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: temporal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Prometheus ─────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+
+  # ── Grafana ───────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.4.0
+    ports:
+      - "3030:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # ── OpenTelemetry Collector ──────────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.0
+    ports:
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+      - "8888:8888"     # Prometheus exporter metrics
+      - "8889:8889"     # Prometheus exporter metrics (remote)
+    volumes:
+      - ./configs/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    restart: unless-stopped
+
+volumes:
+  temporal-data:
+  postgres-data:
+  prometheus-data:
+  grafana-data:

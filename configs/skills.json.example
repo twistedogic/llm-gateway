@@ -1,0 +1,49 @@
+// skills.json — hot-reloaded via fsnotify
+// Retrieved via TF-IDF keyword matching against incoming message content
+{
+  "general_skills": [
+    {
+      "name": "clarify-ambiguous-requests",
+      "description": "Use when the user's request is ambiguous, under-specified, or could be interpreted in multiple ways.",
+      "content": "## Clarify Ambiguous Requests\n\nWhen the task is unclear, do not guess — ask one focused clarifying question before proceeding.\n\n**Process:**\n1. Identify the single most important ambiguity.\n2. Ask exactly one targeted question.\n3. Wait for the answer before proceeding."
+    },
+    {
+      "name": "structured-step-by-step-reasoning",
+      "description": "Use for any problem that involves multiple steps, tradeoffs, or non-trivial logic.",
+      "content": "## Structured Step-by-Step Reasoning\n\nFor non-trivial problems, reason explicitly before giving the final answer.\n\n1. Restate the core question.\n2. Identify key sub-problems.\n3. Work through each sub-problem.\n4. Check intermediate results.\n5. Summarize the conclusion."
+    },
+    {
+      "name": "show-all-steps",
+      "description": "Use when the user asks a math problem, derivation, or quantitative analysis question.",
+      "content": "## Show All Steps\n\n**Process:**\n1. State the knowns and what you're solving for.\n2. Write out every algebraic step explicitly.\n3. Include units throughout.\n4. Verify the answer by substituting back or checking dimensional consistency."
+    }
+  ],
+  "task_specific_skills": {
+    "coding": [
+      {
+        "name": "secure-code-review",
+        "description": "Use when reviewing or writing code that handles user input, authentication, or file I/O.",
+        "content": "## Secure Code Review Checklist\n\n**Input Validation:** Never trust user-supplied input; validate type, length, and format at boundaries.\n\n**Secrets:** No hardcoded passwords or API keys. Use environment variables.\n\n**Auth:** Verify authorization on every protected endpoint, not just at login."
+      },
+      {
+        "name": "golang-best-practices",
+        "description": "Use when writing or reviewing Go code.",
+        "content": "## Go Best Practices\n\n- Use `context.Context` for cancellation and timeouts on all external calls.\n- Return errors rather than panicking in library code.\n- Use `errgroup` for concurrent operations with shared cancellation.\n- Keep error wrapping with `fmt.Errorf(\"doing X: %w\", err)`.\n- Avoid mutexes if channels and goroutines suffice.\n- Use `sync.Pool` for frequently allocated objects."
+      }
+    ],
+    "math": [
+      {
+        "name": "statistical-significance",
+        "description": "Use when reporting numerical results, A/B test outcomes, or comparative metrics.",
+        "content": "## Statistical Significance Reporting\n\n**Required checks before asserting a difference:**\n- Report sample size (n) for each group.\n- Report the p-value or confidence interval.\n- State the effect size, not just statistical significance.\n- Flag when sample size is too small for meaningful conclusions."
+      }
+    ],
+    "data_analysis": [
+      {
+        "name": "precision-on-numbers",
+        "description": "Use when the user asks about financial data, market prices, or quantitative comparisons.",
+        "content": "## Precision on Numbers\n\nWhen citing specific financial or numerical data:\n- Clearly label whether figures are estimates or exact.\n- State the currency, units, and time period.\n- Note the source and when it was retrieved.\n- Flag if data may be stale or estimated."
+      }
+    ]
+  }
+}

@@ -1,0 +1,132 @@
+# llm-gateway configuration
+# All settings can be overridden via environment variables: GATEWAY_* prefix
+
+app:
+  host: "0.0.0.0"
+  port: 8080
+  read_timeout:  30s
+  write_timeout: 300s  # long timeout for streaming + tool loops
+
+telemetry:
+  enabled: true
+  otlp_endpoint: "localhost:4317"          # OTEL Collector gRPC endpoint
+  service_name: "llm-gateway"
+  sampling_rate: 1.0                       # 1.0 = 100%, 0.1 = 10%
+  prometheus_enabled: true
+  prometheus_port: 9090
+
+auth:
+  keys_file: "./configs/keys.json"         # chmod 600
+
+rate_limit:
+  enabled: true
+  window_seconds: 60
+  # RPM limits are per-key, defined in keys.json; defaults apply if not set:
+  default_rpm: 60
+  default_tpm: 30000
+  default_daily: 10000
+
+skills:
+  enabled: true
+  path: "./configs/skills.json"
+  max_skills: 5
+  inject_method: "append"                 # prepend | append | replace
+  topic_header: "X-Gateway-Topics"
+  default_topics:
+    - "general"
+
+tools:
+  enabled: true
+  builtin:
+    - get-current-time
+    - fetch-url
+    - read-file
+    - execute-command
+  custom:
+    - path: "./configs/tools.json"
+  cache:
+    enabled: true
+    max_size_mb: 256
+    default_ttl: 5m
+  execution:
+    max_parallel: 5
+    default_timeout: 30s
+    fail_open: true
+
+context:
+  compaction:
+    enabled: true
+    threshold: 0.85                       # trigger at 85% of model context limit
+    strategy: "summarize"                 # summarize | truncate | hybrid
+    async: true
+    model: "{{ .OriginalModel }}"        # same model as original request
+    summary_prompt: |
+      Summarize the following conversation messages concisely, preserving:
+      - All factual information, numbers, and names mentioned
+      - Key decisions and conclusions reached
+      - User goals and constraints
+      - Any unfinished tasks or follow-up items
+    temporal_task_queue: "gateway-compaction"
+
+hooks:
+  pre:
+    - type: "http"
+      name: "validate-request"
+      url: "https://internal.example.com/validate"
+      timeout: 500ms
+      fail_open: true
+    - type: "temporal"
+      name: "audit-log"
+      workflow: "gateway.audit-hook"
+      task_queue: "gateway-hooks"
+      fail_open: true
+  post:
+    - type: "temporal"
+      name: "conversation-summarize"
+      workflow: "gateway.conversation-summarize"
+      task_queue: "gateway-compaction"
+      fail_open: true
+    - type: "http"
+      name: "webhook-notify"
+      url: "https://notify.example.com/llm"
+      timeout: 2s
+      fail_open: true
+
+providers:
+  # Provider-level defaults (can be overridden per key)
+  openai:
+    base_url: "https://api.openai.com/v1"
+    timeout: 60s
+    max_retries: 2
+  anthropic:
+    base_url: "https://api.anthropic.com/v1"
+    timeout: 60s
+    max_retries: 2
+  azure:
+    base_url: ""                          # set per key in keys.json
+    timeout: 60s
+    max_retries: 2
+  bedrock:
+    region: "us-east-1"
+    timeout: 60s
+    max_retries: 2
+  ollama:
+    base_url: "http://localhost:11434/v1"
+    timeout: 120s
+    max_retries: 1
+  openrouter:
+    base_url: "https://openrouter.ai/api/v1"
+    timeout: 60s
+    max_retries: 2
+    api_key: ""                           # set via OPENROUTER_API_KEY env var
+
+temporal:
+  enabled: true
+  host: "localhost:7233"
+  namespace: "default"
+  task_queue_default: "gateway-default"
+  tls_enabled: false
+
+logging:
+  level: "info"                          # debug | info | warn | error
+  format: "json"                         # json | text

@@ -1,0 +1,66 @@
+# configs/otel-collector.yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: "llm-gateway"
+          static_configs:
+            - targets: ["llm-gateway:9090"]
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+  # Resource attributes — annotate every span with deployment info
+  resource:
+    attributes:
+      - action: insert
+        key: deployment.environment
+        value: ${DEPLOYMENT_ENV:local}
+
+  # Filter out noisy health-check spans
+  filter:
+    spans:
+      exclude:
+        match_type: strict
+        attributes:
+          - key: http.route
+            value: /health
+
+exporters:
+  # Forward traces to your backend (Jaeger, Tempo, Honeycomb, etc.)
+  otlp/tempo:
+    endpoint: ${TEMPO_ENDPOINT:localhost:4317}
+    tls:
+      insecure: true
+
+  # Prometheus metrics endpoint (consumed by Prometheus scrape)
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: "llm_gateway"
+
+  # Debug exporter (prints to stdout — disable in production)
+  logging:
+    verbosity: basic
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [resource, filter, batch]
+      exporters: [otlp/tempo, logging]
+
+    metrics:
+      receivers: [prometheus, otlp]
+      processors: [batch]
+      exporters: [prometheus, logging]

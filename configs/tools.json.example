@@ -1,0 +1,87 @@
+// tools.json — external tool definitions loaded at startup
+// Handlers for custom tools are registered via a Go plugin or external service URL
+{
+  "tools": [
+    {
+      "name": "get-weather",
+      "description": "Returns current weather for a given city.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string",
+            "description": "City name (e.g. Tokyo, London)"
+          },
+          "units": {
+            "type": "string",
+            "enum": ["celsius", "fahrenheit"],
+            "default": "celsius"
+          }
+        },
+        "required": ["city"]
+      },
+      "handler": {
+        "type": "http",
+        "url": "https://api.example.com/weather",
+        "method": "GET",
+        "timeout_ms": 5000
+      },
+      "cache_ttl": "10m"
+    },
+    {
+      "name": "search-documents",
+      "description": "Searches the internal document store for relevant files.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query string"
+          },
+          "max_results": {
+            "type": "integer",
+            "default": 5,
+            "maximum": 20
+          }
+        },
+        "required": ["query"]
+      },
+      "handler": {
+        "type": "http",
+        "url": "https://docs.internal.example.com/search",
+        "method": "POST",
+        "timeout_ms": 10000
+      },
+      "cache_ttl": "1h"
+    },
+    {
+      "name": "send-notification",
+      "description": "Sends a notification message to a user or channel.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string",
+            "description": "Target channel (e.g. slack, email, telegram)"
+          },
+          "recipient": {
+            "type": "string",
+            "description": "Recipient identifier"
+          },
+          "message": {
+            "type": "string",
+            "description": "Notification message content"
+          }
+        },
+        "required": ["channel", "recipient", "message"]
+      },
+      "handler": {
+        "type": "http",
+        "url": "https://notify.internal.example.com/send",
+        "method": "POST",
+        "timeout_ms": 5000
+      },
+      "cache_ttl": "0"       // never cache — always send fresh
+    }
+  ]
+}
