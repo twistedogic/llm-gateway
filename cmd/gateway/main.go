@@ -150,14 +150,14 @@ func loadConfig(path string) (*Config, error) {
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"ok"}`))
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
 // modelsHandler returns OpenAI-compatible models list.
 func modelsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{
+	_, _ = w.Write([]byte(`{
 		"object": "list",
 		"data": [
 			{
