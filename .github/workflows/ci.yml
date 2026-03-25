@@ -78,9 +78,11 @@ jobs:
         run: go mod download
 
       - name: Run tests
-        # Use -race only on Linux/macOS where it's fully supported
+        # Use bash explicitly for cross-platform compatibility
+        # Race detector requires CGO and works on Linux/macOS
+        shell: bash
         run: |
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
             go test -v -coverprofile=coverage.out -covermode=atomic ./...
           else
             go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
