@@ -195,7 +195,7 @@ jobs:
     name: Coverage Report
     runs-on: ubuntu-latest
     needs: test
-    if: always() && !cancelled()
+    if: always() && !cancelled() && github.event_name == 'pull_request'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -208,8 +208,13 @@ jobs:
 
       - name: Generate coverage report
         run: |
-          go install github.com/mattn/goveralls@latest
-          goveralls -coverprofile=coverage/coverage.out -service=github
+          # Skip coverage reporting if no coverage file or on main branch
+          if [ ! -f coverage/coverage.out ]; then
+            echo "No coverage file found, skipping report"
+            exit 0
+          fi
+          echo "Coverage report available at: coverage/coverage.out"
+          head -20 coverage/coverage.out
 
       - name: Add coverage comment
         uses: romeovs/lcov-reporter-action@v0.3.1
