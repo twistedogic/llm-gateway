@@ -149,11 +149,8 @@ jobs:
           which gosec || go install github.com/securego/gosec/v2/cmd/gosec@latest
           gosec -fmt json -out gosec-results.json ./...
 
-      - name: Upload gosec results
-        uses: github/codeql-action/upload-sarif@v3
-        if: success() && fileExists('gosec-results.json')
-        with:
-          sarif_file: gosec-results.json
+      # Note: SARIF upload skipped - requires codeql-action v4+ with proper permissions
+      # See: https://github.com/github/codeql-action/issues/2044
 
   # ============================================
   # Dependency Audit
