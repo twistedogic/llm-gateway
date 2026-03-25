@@ -1,0 +1,204 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+env:
+  GO_VERSION: "1.23"
+  CGO_ENABLED: 0
+
+jobs:
+  # ============================================
+  # Quality Checks: Lint, Format, Security
+  # ============================================
+  quality:
+    name: Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+      - name: Check formatting
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Code not formatted. Run 'gofmt -w .'"
+            gofmt -l .
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+  # ============================================
+  # Test Matrix
+  # ============================================
+  test:
+    name: Test (Go ${{ matrix.go-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ["1.22", "1.23", "1.24"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        exclude:
+          - go-version: "1.24"
+            os: windows-latest  # 1.24 not yet stable on Windows
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu-latest' && matrix.go-version == '1.23'
+        with:
+          name: coverage
+          path: coverage.out
+
+      - name: Run benchmarks (ubuntu only)
+        if: matrix.os == 'ubuntu-latest'
+        run: go test -bench=. -benchmem -run=^$ ./... 2>&1 | head -50
+
+  # ============================================
+  # Build Verification
+  # ============================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Verify build compiles
+        run: go build -n ./... 2>&1 | head -20
+
+      - name: Build binary
+        run: |
+          mkdir -p bin
+          CGO_ENABLED=${{ env.CGO_ENABLED }} go build -ldflags "-X main.Version=ci" -o bin/llm-gateway ./cmd/gateway
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-gateway-${{ runner.os }}
+          path: bin/llm-gateway
+
+  # ============================================
+  # Security Scan
+  # ============================================
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run govulncheck
+        uses: golang/vuln@v1
+        with:
+          verbose: true
+
+      - name: Run gosec
+        run: |
+          which gosec || go install github.com/securego/gosec/v2/cmd/gosec@latest
+          gosec -fmt json -out gosec-results.json ./...
+
+      - name: Upload gosec results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: gosec-results.json
+
+  # ============================================
+  # Dependency Audit
+  # ============================================
+  deps:
+    name: Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Verify go.sum integrity
+        run: |
+          go mod verify
+
+      - name: Check for outdated dependencies
+        run: |
+          go install github.com/psampaz/go-mod-outdated@latest
+          go-mod-outdated -direct -insecure
+
+  # ============================================
+  # Code Coverage Report
+  # ============================================
+  coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: test
+    if: always() && !cancelled()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+
+      - name: Generate coverage report
+        run: |
+          go install github.com/mattn/goveralls@latest
+          goveralls -coverprofile=coverage/coverage.out -service=github
+
+      - name: Add coverage comment
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        if: github.event_name == 'pull_request'
+        with:
+          lcov-file: coverage/coverage.out
+          github-token: ${{ secrets.GITHUB_TOKEN }}
