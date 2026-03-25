@@ -17,9 +17,9 @@ import (
 
 // Config holds the gateway configuration.
 type Config struct {
-	Server   ServerConfig
+	Server    ServerConfig
 	Telemetry TelemetryConfig
-	Auth     AuthConfig
+	Auth      AuthConfig
 }
 
 // ServerConfig holds HTTP server settings.

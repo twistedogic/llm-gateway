@@ -7,6 +7,9 @@
 *.dll
 *.so
 *.dylib
+# Binary at repo root (not cmd/gateway/)
+/gateway
+bin/
 
 # Test binary, built with `go test -c`
 *.test
