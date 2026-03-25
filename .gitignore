@@ -35,4 +35,4 @@ go.work.sum
 # .vscode/
 
 AGENTS.md
-lightspec/
+# lightspec/
