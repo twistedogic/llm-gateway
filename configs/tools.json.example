@@ -1,87 +1,175 @@
-// tools.json — external tool definitions loaded at startup
-// Handlers for custom tools are registered via a Go plugin or external service URL
 {
   "tools": [
     {
-      "name": "get-weather",
-      "description": "Returns current weather for a given city.",
+      "name": "get-current-time",
+      "description": "Returns the current UTC date and time.",
+      "schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "enabled": true
+    },
+    {
+      "name": "fetch-url",
+      "description": "Fetches the content of a URL. Use for retrieving current information, documentation, or web pages.",
       "schema": {
         "type": "object",
         "properties": {
-          "city": {
+          "url": {
             "type": "string",
-            "description": "City name (e.g. Tokyo, London)"
+            "description": "URL to fetch"
           },
-          "units": {
-            "type": "string",
-            "enum": ["celsius", "fahrenheit"],
-            "default": "celsius"
+          "max_chars": {
+            "type": "integer",
+            "description": "Maximum characters to extract (default 5000)"
           }
         },
-        "required": ["city"]
+        "required": ["url"]
       },
-      "handler": {
-        "type": "http",
-        "url": "https://api.example.com/weather",
-        "method": "GET",
-        "timeout_ms": 5000
-      },
-      "cache_ttl": "10m"
+      "enabled": true,
+      "timeout": "10s",
+      "cache_ttl": "5m"
     },
     {
-      "name": "search-documents",
-      "description": "Searches the internal document store for relevant files.",
+      "name": "read-file",
+      "description": "Reads the contents of a local file.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Absolute file path"
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Byte offset to start reading (default 0)"
+          },
+          "length": {
+            "type": "integer",
+            "description": "Maximum bytes to read (default 65536)"
+          }
+        },
+        "required": ["path"]
+      },
+      "enabled": true,
+      "timeout": "2s",
+      "allowed_paths": ["/home/*", "/tmp/*"]  # Path restrictions
+    },
+    {
+      "name": "execute-command",
+      "description": "Executes a shell command on the local system.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "Shell command to execute"
+          },
+          "working_dir": {
+            "type": "string",
+            "description": "Optional working directory"
+          },
+          "timeout": {
+            "type": "string",
+            "description": "Command timeout (default 30s)"
+          }
+        },
+        "required": ["command"]
+      },
+      "enabled": false,  # Disabled by default for security
+      "timeout": "30s",
+      "allowed_commands": ["git", "ls", "cat", "grep", "wc"]  # Allowlist
+    },
+    {
+      "name": "search-code",
+      "description": "Searches for code patterns in a repository.",
       "schema": {
         "type": "object",
         "properties": {
           "query": {
             "type": "string",
-            "description": "Search query string"
+            "description": "Search query"
           },
-          "max_results": {
-            "type": "integer",
-            "default": 5,
-            "maximum": 20
+          "repo_path": {
+            "type": "string",
+            "description": "Path to the repository"
+          },
+          "file_pattern": {
+            "type": "string",
+            "description": "File pattern to search (e.g., '*.go')"
           }
         },
         "required": ["query"]
       },
-      "handler": {
-        "type": "http",
-        "url": "https://docs.internal.example.com/search",
-        "method": "POST",
-        "timeout_ms": 10000
+      "enabled": true,
+      "timeout": "5s"
+    },
+    {
+      "name": "database-query",
+      "description": "Executes a read-only database query.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "SQL query to execute"
+          },
+          "max_rows": {
+            "type": "integer",
+            "description": "Maximum rows to return (default 100)"
+          }
+        },
+        "required": ["query"]
       },
-      "cache_ttl": "1h"
+      "enabled": false,  # Disabled by default
+      "timeout": "10s",
+      "readonly": true,
+      "connection_env": "DATABASE_URL"
     },
     {
       "name": "send-notification",
-      "description": "Sends a notification message to a user or channel.",
+      "description": "Sends a notification to a configured channel.",
       "schema": {
         "type": "object",
         "properties": {
           "channel": {
             "type": "string",
-            "description": "Target channel (e.g. slack, email, telegram)"
-          },
-          "recipient": {
-            "type": "string",
-            "description": "Recipient identifier"
+            "description": "Notification channel (email, slack, webhook)"
           },
           "message": {
             "type": "string",
-            "description": "Notification message content"
+            "description": "Notification message"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "normal", "high", "urgent"],
+            "description": "Message priority"
           }
         },
-        "required": ["channel", "recipient", "message"]
+        "required": ["channel", "message"]
       },
-      "handler": {
-        "type": "http",
-        "url": "https://notify.internal.example.com/send",
-        "method": "POST",
-        "timeout_ms": 5000
+      "enabled": false,
+      "timeout": "5s"
+    },
+    {
+      "name": "calculate",
+      "description": "Performs mathematical calculations.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "expression": {
+            "type": "string",
+            "description": "Mathematical expression to evaluate"
+          },
+          "precision": {
+            "type": "integer",
+            "description": "Decimal precision (default 10)"
+          }
+        },
+        "required": ["expression"]
       },
-      "cache_ttl": "0"       // never cache — always send fresh
+      "enabled": true,
+      "timeout": "1s"
     }
   ]
 }

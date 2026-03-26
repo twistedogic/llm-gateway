@@ -1,11 +1,9 @@
-// keys.json — chmod 600, owned by gateway process
-// Supports hot-reload: changes are picked up automatically via fsnotify
 {
   "keys": [
     {
-      "id": "key-team-a",
+      "id": "key-team-backend",
       "provider": "openai",
-      "key": "sk-proj-...",
+      "key": "sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
       "tier": "standard",
       "limits": {
         "rpm": 500,
@@ -13,34 +11,72 @@
         "daily": 50000
       },
       "metadata": {
-        "team": "team-a",
-        "owner": "jordan@example.com"
+        "team": "backend",
+        "owner": "backend-team@example.com",
+        "description": "Backend team production key"
+      }
+    },
+    {
+      "id": "key-team-ml",
+      "provider": "anthropic",
+      "key": "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "tier": "standard",
+      "limits": {
+        "rpm": 400,
+        "tpm": 200000,
+        "daily": 40000
+      },
+      "metadata": {
+        "team": "ml",
+        "owner": "ml-team@example.com",
+        "description": "ML team Anthropic key"
       }
     },
     {
       "id": "key-enterprise",
       "provider": "azure",
-      "key": "...",
+      "key": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
       "endpoint": "https://mycompany.openai.azure.com",
       "api_version": "2024-06-01",
       "tier": "enterprise",
       "limits": {
         "rpm": 10000,
-        "tpm": 10000000
+        "tpm": 10000000,
+        "daily": 1000000
       },
       "metadata": {
-        "team": "platform",
-        "owner": "infra@example.com"
+        "team": "enterprise",
+        "owner": "enterprise@example.com",
+        "description": "Enterprise Azure OpenAI deployment"
       }
     },
     {
-      "id": "key-user-01",
+      "id": "key-user-jordan",
       "provider": "openai",
-      "key": "sk-...",
+      "key": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
       "tier": "personal",
       "limits": {
         "rpm": 60,
-        "tpm": 30000
+        "tpm": 30000,
+        "daily": 5000
+      },
+      "metadata": {
+        "owner": "jordan@example.com",
+        "description": "Personal development key"
+      }
+    },
+    {
+      "id": "key-local-ollama",
+      "provider": "ollama",
+      "key": "local-ollama",
+      "tier": "internal",
+      "limits": {
+        "rpm": 1000,
+        "tpm": 1000000,
+        "daily": 100000
+      },
+      "metadata": {
+        "description": "Local Ollama instance for development"
       }
     }
   ]

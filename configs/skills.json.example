@@ -1,21 +1,34 @@
-// skills.json — hot-reloaded via fsnotify
-// Retrieved via TF-IDF keyword matching against incoming message content
 {
   "general_skills": [
     {
       "name": "clarify-ambiguous-requests",
       "description": "Use when the user's request is ambiguous, under-specified, or could be interpreted in multiple ways.",
-      "content": "## Clarify Ambiguous Requests\n\nWhen the task is unclear, do not guess — ask one focused clarifying question before proceeding.\n\n**Process:**\n1. Identify the single most important ambiguity.\n2. Ask exactly one targeted question.\n3. Wait for the answer before proceeding."
+      "content": "## Clarify Ambiguous Requests\n\nWhen the task is unclear, do not guess — ask one focused clarifying question before proceeding.\n\n**Process:**\n1. Identify the single most important ambiguity.\n2. Ask exactly one targeted question.\n3. Wait for the answer before proceeding.\n\n**Examples of ambiguity:**\n- Vague time references ('soon', 'later')\n- Unclear scope ('fix the code', 'improve performance')\n- Missing context or prerequisites"
     },
     {
       "name": "structured-step-by-step-reasoning",
       "description": "Use for any problem that involves multiple steps, tradeoffs, or non-trivial logic.",
-      "content": "## Structured Step-by-Step Reasoning\n\nFor non-trivial problems, reason explicitly before giving the final answer.\n\n1. Restate the core question.\n2. Identify key sub-problems.\n3. Work through each sub-problem.\n4. Check intermediate results.\n5. Summarize the conclusion."
+      "content": "## Structured Step-by-Step Reasoning\n\nFor non-trivial problems, reason explicitly before giving the final answer.\n\n**Process:**\n1. **Restate** the core question or problem.\n2. **Identify** key sub-problems or components.\n3. **Analyze** each sub-problem with intermediate reasoning.\n4. **Verify** intermediate results where possible.\n5. **Synthesize** the final answer from components.\n\n**When to use:**\n- Multi-step calculations or derivations\n- Architecture or design decisions\n- Debugging complex issues\n- Trade-off analysis"
     },
     {
-      "name": "show-all-steps",
-      "description": "Use when the user asks a math problem, derivation, or quantitative analysis question.",
-      "content": "## Show All Steps\n\n**Process:**\n1. State the knowns and what you're solving for.\n2. Write out every algebraic step explicitly.\n3. Include units throughout.\n4. Verify the answer by substituting back or checking dimensional consistency."
+      "name": "error-handling-best-practices",
+      "description": "Use when writing code that handles errors, exceptions, or failure modes.",
+      "content": "## Error Handling Best Practices\n\n**Principles:**\n1. **Fail fast** on programmer errors (use panic/assert)\n2. **Fail gracefully** on recoverable errors\n3. **Log context** — include request ID, user ID, stack trace\n4. **Never swallow errors** silently\n\n**Patterns:**\n- Wrap errors with context: `fmt.Errorf(\"process request: %w\", err)`\n- Use sentinel errors for recoverable cases\n- Return errors as values, handle at appropriate layer\n- Use error types for structured error data"
+    },
+    {
+      "name": "security-first-mindset",
+      "description": "Use when handling user input, authentication, authorization, or sensitive data.",
+      "content": "## Security-First Mindset\n\n**Input Validation:**\n- Never trust user-supplied input\n- Validate type, length, format at system boundaries\n- Sanitize before rendering or storing\n\n**Authentication & Authorization:**\n- Verify authorization on every protected endpoint\n- Use principle of least privilege\n- Rotate secrets regularly\n\n**Secrets Management:**\n- No hardcoded passwords, API keys, or tokens\n- Use environment variables or secret managers\n- Log secrets never, not even partially\n\n**Injection Prevention:**\n- Parameterize all database queries\n- Sanitize HTML/markdown before rendering\n- Validate URLs before following redirects"
+    },
+    {
+      "name": "performance-considerations",
+      "description": "Use when optimizing code for speed, memory, or throughput.",
+      "content": "## Performance Considerations\n\n**Before Optimizing:**\n1. Measure — use profiling to find actual bottlenecks\n2. Identify the critical path\n3. Set measurable performance goals\n\n**Common Patterns:**\n- **Caching**: Cache expensive computations, respect TTLs\n- **Batching**: Batch I/O operations (DB, API calls)\n- **Async**: Use goroutines/async for independent operations\n- **Pooling**: Reuse connections, workers, buffers\n\n**Memory:**\n- Avoid allocations in hot paths\n- Use sync.Pool for frequently allocated objects\n- Stream large data instead of buffering"
+    },
+    {
+      "name": "api-design-principles",
+      "description": "Use when designing REST APIs, gRPC services, or internal interfaces.",
+      "content": "## API Design Principles\n\n**Consistency:**\n- Use consistent naming conventions (REST: nouns, gRPC: VerbNoun)\n- Standard error formats across all endpoints\n- Version from day one\n\n**Usability:**\n- Provide sensible defaults\n- Be generous with what you accept, strict with what you return\n- Include documentation and examples\n\n**Idempotency:**\n- Design for retry-safety\n- Use idempotency keys for state-changing operations\n\n**Versioning:**\n- URL versioning for REST: `/v1/`, `/v2/`\n- Package versioning for libraries\n- Maintain backward compatibility when possible"
     }
   ],
   "task_specific_skills": {
@@ -23,26 +36,33 @@
       {
         "name": "secure-code-review",
         "description": "Use when reviewing or writing code that handles user input, authentication, or file I/O.",
-        "content": "## Secure Code Review Checklist\n\n**Input Validation:** Never trust user-supplied input; validate type, length, and format at boundaries.\n\n**Secrets:** No hardcoded passwords or API keys. Use environment variables.\n\n**Auth:** Verify authorization on every protected endpoint, not just at login."
+        "content": "## Secure Code Review Checklist\n\n**Input Validation:**\n- [ ] All user inputs are validated before use\n- [ ] Type coercion is explicit\n- [ ] Length limits enforced\n- [ ] Special characters sanitized\n\n**Authentication:**\n- [ ] Authorization checked on every protected route\n- [ ] Session tokens are secure\n- [ ] Passwords hashed with appropriate algorithm\n\n**Data Protection:**\n- [ ] No secrets in code or logs\n- [ ] Sensitive data encrypted at rest\n- [ ] HTTPS enforced in production\n\n**Error Handling:**\n- [ ] Errors don't leak implementation details\n- [ ] Failures don't expose stack traces"
       },
       {
-        "name": "golang-best-practices",
-        "description": "Use when writing or reviewing Go code.",
-        "content": "## Go Best Practices\n\n- Use `context.Context` for cancellation and timeouts on all external calls.\n- Return errors rather than panicking in library code.\n- Use `errgroup` for concurrent operations with shared cancellation.\n- Keep error wrapping with `fmt.Errorf(\"doing X: %w\", err)`.\n- Avoid mutexes if channels and goroutines suffice.\n- Use `sync.Pool` for frequently allocated objects."
+        "name": "code-documentation",
+        "description": "Use when writing documentation for code, APIs, or systems.",
+        "content": "## Code Documentation Guidelines\n\n**For Functions:**\n```go\n// FuncName does X with Y, returning Z.\n//\n// It handles edge cases by doing W.\n//\n// Example:\n//   result, err := FuncName(ctx, input)\n//   if err != nil {\n//       return nil, fmt.Errorf(\" FuncName: %w\", err)\n//   }\nfunc FuncName(ctx context.Context, input Input) (Output, error)\n```\n\n**For Packages:**\n- Document the package's purpose in doc.go\n- List main types and their relationships\n- Include usage examples"
       }
     ],
     "math": [
       {
-        "name": "statistical-significance",
-        "description": "Use when reporting numerical results, A/B test outcomes, or comparative metrics.",
-        "content": "## Statistical Significance Reporting\n\n**Required checks before asserting a difference:**\n- Report sample size (n) for each group.\n- Report the p-value or confidence interval.\n- State the effect size, not just statistical significance.\n- Flag when sample size is too small for meaningful conclusions."
+        "name": "show-all-steps",
+        "description": "Use when the user asks a math problem, derivation, or quantitative analysis question.",
+        "content": "## Show All Steps\n\n1. **State** the knowns and what you're solving for.\n2. **Write** out every algebraic step explicitly.\n3. **Include** units throughout.\n4. **Verify** by substituting back.\n\n**Notation:**\n- Use standard mathematical notation\n- Define all variables before use\n- Show intermediate results with units\n\n**Example format:**\n```\nGiven: v₀ = 10 m/s, a = 2 m/s², t = 5 s\nFind: v₁\n\nv₁ = v₀ + at\n   = 10 + (2)(5)\n   = 10 + 10\n   = 20 m/s\n\nVerify: ✓ (correct dimensions, reasonable magnitude)"
       }
     ],
-    "data_analysis": [
+    "debugging": [
       {
-        "name": "precision-on-numbers",
-        "description": "Use when the user asks about financial data, market prices, or quantitative comparisons.",
-        "content": "## Precision on Numbers\n\nWhen citing specific financial or numerical data:\n- Clearly label whether figures are estimates or exact.\n- State the currency, units, and time period.\n- Note the source and when it was retrieved.\n- Flag if data may be stale or estimated."
+        "name": "systematic-debugging",
+        "description": "Use when debugging a bug, crash, or unexpected behavior.",
+        "content": "## Systematic Debugging Process\n\n1. **Reproduce** — Can you consistently reproduce the bug?\n2. **Isolate** — Find the minimal case that triggers it\n3. **Hypothesize** — What's the most likely cause?\n4. **Test** — Verify or refute the hypothesis\n5. **Fix** — Implement the smallest fix possible\n6. **Verify** — Confirm the bug is gone\n7. **Prevent** — Add a test to catch this in the future\n\n**Tools:**\n- Logs: Look for ERROR, WARN before the crash\n- Traces: Find the span where things went wrong\n- Metrics: Check for anomalies in resource usage\n- Reproducer: Create a minimal test case"
+      }
+    ],
+    "writing": [
+      {
+        "name": "concise-technical-writing",
+        "description": "Use when writing technical documentation, emails, or explanations.",
+        "content": "## Concise Technical Writing\n\n**Principles:**\n1. **Lead with the point** — Put conclusions first\n2. **Use active voice** — 'The system processes' not 'The system is processed'\n3. **Be specific** — Use numbers, names, not 'many', 'some'\n4. **Cut filler** — Remove 'in order to', 'that', 'just'\n\n**Structure:**\n- **Subject/Verb first**: 'The API returns 200' not 'A 200 response is returned'\n- **Short sentences**: One idea per sentence\n- **Lists for steps**: Use numbered lists for sequences\n- **Tables for comparisons**: Use tables for structured data\n\n**Example:**\n❌ 'In order to ensure that the request is processed correctly...'\n✅ 'To process the request correctly...'"
       }
     ]
   }

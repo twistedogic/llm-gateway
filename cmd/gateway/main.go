@@ -12,33 +12,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/spf13/viper"
+	"github.com/example/llm-gateway/internal/config"
+	"github.com/example/llm-gateway/internal/gateway"
+	"github.com/example/llm-gateway/internal/telemetry"
 )
 
-// Config holds the gateway configuration.
-type Config struct {
-	Server    ServerConfig
-	Telemetry TelemetryConfig
-	Auth      AuthConfig
-}
-
-// ServerConfig holds HTTP server settings.
-type ServerConfig struct {
-	Host string
-	Port int
-}
-
-// TelemetryConfig holds observability settings.
-type TelemetryConfig struct {
-	Enabled  bool
-	Endpoint string
-}
-
-// AuthConfig holds authentication settings.
-type AuthConfig struct {
-	KeysPath string
-}
-
+// main is the entry point for llm-gateway.
 func main() {
 	// Parse CLI flags
 	configPath := flag.String("config", "configs/gateway.yaml", "path to config file")
@@ -57,13 +36,20 @@ func main() {
 	slog.SetDefault(logger)
 
 	// Load configuration
-	cfg, err := loadConfig(*configPath)
+	cfg, err := config.Load(*configPath)
 	if err != nil {
 		logger.Warn("failed to load config, using defaults", "error", err)
-		cfg = &Config{
-			Server: ServerConfig{
+		// Create minimal config with defaults
+		cfg = &config.Config{
+			Server: config.ServerConfig{
 				Host: *host,
 				Port: *port,
+			},
+			Auth: config.AuthConfig{
+				KeysPath: "configs/keys.json",
+			},
+			Telemetry: config.TelemetryConfig{
+				Enabled: false, // Disabled by default, enable in config
 			},
 		}
 	} else {
@@ -79,16 +65,37 @@ func main() {
 	logger.Info("starting gateway",
 		"host", cfg.Server.Host,
 		"port", cfg.Server.Port,
+		"config", *configPath,
 	)
 
-	// Create HTTP server
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", healthHandler)
-	mux.HandleFunc("/v1/models", modelsHandler)
+	// Initialize telemetry (Phase 2 - metrics middleware)
+	ctx := context.Background()
+	var telemetryShutdown func()
+	if cfg.Telemetry.Enabled {
+		telemetryShutdown, err = telemetry.InitWithConfig(ctx, telemetry.Config{
+			Enabled:        cfg.Telemetry.Enabled,
+			OTLPEndpoint:   cfg.Telemetry.OTLPEndpoint,
+			PrometheusPort: cfg.Telemetry.PrometheusPort,
+			ServiceName:    "llm-gateway",
+			SampleRate:     cfg.Telemetry.SampleRate,
+		})
+		if err != nil {
+			logger.Warn("failed to initialize telemetry", "error", err)
+		} else {
+			logger.Info("telemetry initialized",
+				"otlp_endpoint", cfg.Telemetry.OTLPEndpoint,
+				"prometheus_port", cfg.Telemetry.PrometheusPort,
+			)
+		}
+	}
 
+	// Create gateway server (Phase 2 - wiring all middleware)
+	srv := gateway.NewServer(cfg, logger)
+
+	// Create HTTP server
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port),
-		Handler:      mux,
+		Handler:      srv, // Gateway server handles routing + middleware
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -115,57 +122,18 @@ func main() {
 	}
 
 	// Graceful shutdown with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		logger.Error("server shutdown error", "error", err)
 		os.Exit(1)
 	}
 
+	// Shutdown telemetry
+	if telemetryShutdown != nil {
+		telemetryShutdown()
+	}
+
 	logger.Info("server stopped")
-}
-
-// loadConfig loads configuration from file using viper.
-func loadConfig(path string) (*Config, error) {
-	viper.SetConfigFile(path)
-	viper.SetConfigType("yaml")
-
-	// Environment variable overrides
-	viper.AutomaticEnv()
-
-	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("failed to read config: %w", err)
-	}
-
-	var cfg Config
-	if err := viper.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
-	}
-
-	return &cfg, nil
-}
-
-// healthHandler returns server health status.
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ok"}`))
-}
-
-// modelsHandler returns OpenAI-compatible models list.
-func modelsHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{
-		"object": "list",
-		"data": [
-			{
-				"id": "gateway-model",
-				"object": "model",
-				"created": 1700000000,
-				"owned_by": "system"
-			}
-		]
-	}`))
 }

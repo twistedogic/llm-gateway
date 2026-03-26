@@ -1,0 +1,164 @@
+# llm-gateway Configuration
+# Copy to configs/gateway.yaml and customize
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  read_timeout: 30s
+  write_timeout: 300s  # Long timeout for streaming
+  idle_timeout: 120s
+
+# Authentication configuration
+auth:
+  keys_path: "./configs/keys.json"
+  header_name: "Authorization"  # or "X-API-Key"
+  require_bearer: true
+
+# Rate limiting configuration
+ratelimit:
+  window_secs: 60
+  default_rpm: 60
+  default_tpm: 30000
+  default_daily: 10000
+  enabled: true
+
+# Provider routing configuration
+providers:
+  openai:
+    enabled: true
+    api_key_env: "OPENAI_API_KEY"  # Or use keys.json per-key
+    base_url: "https://api.openai.com/v1"
+    timeout: 60s
+    models:
+      - "gpt-4o"
+      - "gpt-4o-mini"
+      - "gpt-4-turbo"
+
+  anthropic:
+    enabled: true
+    api_key_env: "ANTHROPIC_API_KEY"
+    base_url: "https://api.anthropic.com/v1"
+    timeout: 60s
+    models:
+      - "claude-opus-4-20250514"
+      - "claude-sonnet-4-20250514"
+      - "claude-3-5-sonnet-latest"
+
+  azure:
+    enabled: false
+    endpoint_env: "AZURE_OPENAI_ENDPOINT"
+    api_key_env: "AZURE_OPENAI_KEY"
+    api_version: "2024-06-01"
+
+  bedrock:
+    enabled: false
+    region: "us-east-1"
+    # AWS credentials from environment or IAM
+
+  ollama:
+    enabled: true
+    base_url: "http://localhost:11434"
+    timeout: 120s
+    models:
+      - "llama3.2"
+      - "codellama"
+
+  openrouter:
+    enabled: false
+    api_key_env: "OPENROUTER_API_KEY"
+    base_url: "https://openrouter.ai/api/v1"
+
+# Skills configuration (MetaClaw retrieval)
+skills:
+  enabled: true
+  path: "./configs/skills.json"
+  max_skills: 5
+  inject_method: "append"  # "append" or "prepend"
+  topic_header: "X-Gateway-Topics"
+  hot_reload: true
+  threshold: 0.1  # Minimum TF-IDF score to include
+
+# Tools configuration
+tools:
+  enabled: true
+  builtin:
+    - "get-current-time"
+    - "fetch-url"
+    - "read-file"
+    - "execute-command"
+  custom_path: "./configs/tools.json"
+  cache:
+    enabled: true
+    max_size_mb: 256
+    default_ttl: 5m
+  execution:
+    max_parallel: 5
+    default_timeout: 30s
+    fail_open: true  # Return error instead of blocking on tool failure
+
+# Context compaction
+context:
+  compaction:
+    enabled: true
+    threshold: 0.85  # Trigger at 85% of context window
+    strategy: "summarize"  # "truncate", "summarize", "hybrid"
+    async: true  # Fire-and-forget, don't block response
+    model: "gpt-4o-mini"  # Model for summarization
+    summary_prompt: |
+      Summarize the following conversation concisely, preserving:
+      - All factual information, numbers, and names mentioned
+      - Key decisions and conclusions reached
+      - User goals and constraints
+      - Any unfinished tasks or follow-up items
+
+# Hooks configuration
+hooks:
+  pre:
+    - type: "http"
+      name: "validate-request"
+      url: "https://internal.example.com/validate"
+      timeout: 500ms
+      fail_open: true
+    - type: "logging"
+      name: "log-request"
+  post:
+    - type: "temporal"
+      name: "audit-log"
+      workflow: "gateway.audit-hook"
+      task_queue: "gateway-hooks"
+      fail_open: true
+    - type: "temporal"
+      name: "conversation-summarize"
+      workflow: "gateway.conversation-summarize"
+      task_queue: "gateway-compaction"
+      fail_open: true
+
+# Telemetry configuration
+telemetry:
+  enabled: true
+  service_name: "llm-gateway"
+  otlp:
+    enabled: true
+    endpoint: "localhost:4317"  # OTLP gRPC endpoint
+    insecure: true
+  prometheus:
+    enabled: true
+    path: "/metrics"
+  sampling_rate: 1.0  # 100% sampling in dev, lower in prod
+  export_interval: 10s
+
+# Logging configuration
+logging:
+  level: "info"  # "debug", "info", "warn", "error"
+  format: "json"  # "json" or "text"
+  output: "stdout"  # "stdout" or file path
+
+# Health check
+health:
+  enabled: true
+  path: "/health"
+  readiness:
+    enabled: true
+    path: "/ready"
+    check_providers: true
+    check_temporal: false
